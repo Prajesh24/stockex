@@ -4,11 +4,7 @@ class MyButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const MyButton({
-    super.key,
-    required this.text,
-    required this.onPressed,
-  });
+  const MyButton({super.key, required this.text, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -18,16 +14,13 @@ class MyButton extends StatelessWidget {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.greenAccent,
-          foregroundColor: Colors.black,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 18),
-        ),
+        child: Text(text, style: const TextStyle(fontSize: 18)),
       ),
     );
   }
