@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:stockex/screen/home.dart';
+import 'package:stockex/screen/button_navigator_screen.dart';
+
 import 'package:stockex/screen/register_screen.dart';
 import 'package:stockex/widgets/my_text_field.dart';
 import '../widgets/my_button.dart';
@@ -71,7 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
+                              builder: (context) =>
+                                  const ButtonNavigatorScreen(),
                             ),
                           );
                         });
