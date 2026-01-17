@@ -1,11 +1,18 @@
 import 'package:stockex/features/auth/data/model/auth_hive_model.dart';
+import 'package:stockex/features/auth/data/model/auth_api_model.dart';
 
-abstract class IAuthDataSource {
-  Future<bool> register(AuthHiveModel model);
-  Future<AuthHiveModel?> login(String email, String password);
+// import 'package:stockex/features/auth/data/model/auth_hive_model.dart';
+
+abstract interface class IAuthLocalDatasource {
+  Future<bool> registerUser(AuthHiveModel user);
+  Future<AuthHiveModel?> loginUser(String email, String password);
   Future<AuthHiveModel?> getCurrentUser(String authId);
-  Future<bool> logout();
-
-  //get email exists
+  Future<bool> logoutUser();
   Future<bool> isEmailExists(String email);
+}
+
+
+abstract interface class IAuthRemoteDatasource {
+  Future<bool> registerUser(AuthApiModel user);
+  Future<AuthApiModel?> loginUser(String email, String password);
 }
