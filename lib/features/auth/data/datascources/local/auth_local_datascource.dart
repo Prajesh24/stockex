@@ -9,7 +9,7 @@ final authLocalDataSourceProvider = Provider<AuthLocalDatascource>((ref) {
   return AuthLocalDatascource(hiveService: hiveService);
 });
 
-class AuthLocalDatascource implements IAuthDataSource {
+class AuthLocalDatascource implements IAuthLocalDatasource {
   final HiveService _hiveService;
 
   AuthLocalDatascource({required HiveService hiveService})
@@ -33,7 +33,7 @@ class AuthLocalDatascource implements IAuthDataSource {
   }
 
   @override
-  Future<AuthHiveModel> login(String email, String password) async {
+  Future<AuthHiveModel> loginUser(String email, String password) async {
     try {
       final user = await _hiveService.loginUser(email, password);
       return Future.value(user);
@@ -43,7 +43,7 @@ class AuthLocalDatascource implements IAuthDataSource {
   }
 
   @override
-  Future<bool> logout() async {
+  Future<bool> logoutUser() async {
     try {
       await _hiveService.logoutUser();
       return Future.value(true);
@@ -53,7 +53,7 @@ class AuthLocalDatascource implements IAuthDataSource {
   }
 
   @override
-  Future<bool> register(AuthHiveModel model) async {
+  Future<bool> registerUser(AuthHiveModel model) async {
     try {
       await _hiveService.registerUser(model);
       return Future.value(true);
