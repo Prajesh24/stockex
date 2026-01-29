@@ -1,20 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stockex/app/app.dart';
 import 'package:stockex/core/services/hive/hive_service.dart';
-import 'package:stockex/features/auth/data/model/auth_hive_model.dart';
+import 'package:stockex/core/services/storage/user_session_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final hiveService = HiveService();
-  await hiveService.init();
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  // initialize Hive or other services if needed
+  await HiveService().init();
+
+  // Initialize SharedPreferences : because this is async operation
+  // but riverpod providers are sync so we need to initialize it here
+  final sharedPreferences = await SharedPreferences.getInstance();
 
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      ],
+      child: const MyApp(),
     ),
   );
 }
-
