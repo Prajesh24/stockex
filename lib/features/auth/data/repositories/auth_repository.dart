@@ -15,7 +15,6 @@ import 'package:stockex/features/auth/data/model/auth_hive_model.dart';
 import 'package:stockex/features/auth/domain/entities/auth_entity.dart';
 import 'package:stockex/features/auth/domain/repository/auth_repository.dart';
 
-
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
   return AuthRepository(
     authLocalDatasource: ref.read(authLocalDataSourceProvider),
@@ -23,9 +22,6 @@ final authRepositoryProvider = Provider<IAuthRepository>((ref) {
     networkInfo: ref.read(networkInfoProvider),
   );
 });
-
-
-
 
 class AuthRepository implements IAuthRepository {
   final IAuthLocalDatasource _authLocalDatasource;
@@ -36,9 +32,9 @@ class AuthRepository implements IAuthRepository {
     required IAuthLocalDatasource authLocalDatasource,
     required IAuthRemoteDatasource authRemoteDatasource,
     required NetworkInfo networkInfo,
-  })  : _authLocalDatasource = authLocalDatasource,
-        _authRemoteDatasource = authRemoteDatasource,
-        _networkInfo = networkInfo;
+  }) : _authLocalDatasource = authLocalDatasource,
+       _authRemoteDatasource = authRemoteDatasource,
+       _networkInfo = networkInfo;
 
   // 🔐 LOGIN
   @override
@@ -48,14 +44,14 @@ class AuthRepository implements IAuthRepository {
   ) async {
     if (await _networkInfo.isConnected) {
       try {
-        final user =
-            await _authRemoteDatasource.loginUser(email, password);
+        final user = await _authRemoteDatasource.loginUser(email, password);
 
-        if (user != null) {
-          return Right(user.toEntity());
+        if (user == null) {
+           return Left(ServerFailure(message: 'Login failed'));
         }
+        return Right(user.toEntity());
 
-        return Left(ServerFailure(message: 'Login failed'));
+
       } on DioException catch (e) {
         return Left(
           ServerFailure(
@@ -68,16 +64,13 @@ class AuthRepository implements IAuthRepository {
       }
     } else {
       try {
-        final user =
-            await _authLocalDatasource.loginUser(email, password);
+        final user = await _authLocalDatasource.loginUser(email, password);
 
         if (user != null) {
           return Right(user.toEntity());
         }
 
-        return Left(
-          LocalDatabaseFailue(message: 'Invalid email or password'),
-        );
+        return Left(LocalDatabaseFailue(message: 'Invalid email or password'));
       } catch (e) {
         return Left(LocalDatabaseFailue(message: e.toString()));
       }
@@ -121,16 +114,13 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<Either<Failure, AuthEntity>> getCurrentUser() async {
     try {
-      final user =
-          await _authLocalDatasource.getCurrentUser('current_user_id');
+      final user = await _authLocalDatasource.getCurrentUser('current_user_id');
 
       if (user != null) {
         return Right(user.toEntity());
       }
 
-      return Left(
-        LocalDatabaseFailue(message: 'No current user found'),
-      );
+      return Left(LocalDatabaseFailue(message: 'No current user found'));
     } catch (e) {
       return Left(LocalDatabaseFailue(message: e.toString()));
     }

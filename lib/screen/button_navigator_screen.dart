@@ -14,22 +14,21 @@ class ButtonNavigatorScreen extends StatefulWidget {
 class _ButtonNavigatorScreenState extends State<ButtonNavigatorScreen> {
   int _selectedIndex = 0;
 
-  List<Widget> lstBottomScreen = [
+  final List<Widget> _screens = const [
     HomeScreen(),
     PortfolioScreen(),
-    ProfileScreen(),
     WatchlistScreen(),
+    ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Stockex',
           style: TextStyle(
             color: Colors.white,
-            fontFamily: 'OpenScans Bold',
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
@@ -37,9 +36,22 @@ class _ButtonNavigatorScreenState extends State<ButtonNavigatorScreen> {
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 28, 29, 28),
       ),
-      body: lstBottomScreen[_selectedIndex],
+
+      // 🔥 FIX HERE
+      body: IndexedStack(index: _selectedIndex, children: _screens),
+
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color.fromARGB(255, 28, 29, 28),
+        selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.white,
+        iconSize: 27,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
@@ -52,16 +64,6 @@ class _ButtonNavigatorScreenState extends State<ButtonNavigatorScreen> {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
-        backgroundColor: const Color.fromARGB(255, 28, 29, 28),
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.white,
-        iconSize: 27,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
       ),
     );
   }

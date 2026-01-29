@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:stockex/screen/login_screen.dart';
+import 'package:stockex/features/auth/presentation/pages/login_page.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -49,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
+                      builder: (context) => const LoginPage(),
                     ),
                   );
                 },
@@ -146,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                          builder: (context) => const LoginPage(),
                         ),
                       );
                     } else {

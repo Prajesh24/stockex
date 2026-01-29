@@ -9,14 +9,21 @@ part 'auth_hive_model.g.dart';
 class AuthHiveModel extends HiveObject {
   @HiveField(0)
   final String? authId;
+
   @HiveField(1)
   final String fullName;
+
   @HiveField(2)
   final String email;
+
   @HiveField(3)
   final String phoneNumber;
+
   @HiveField(4)
   final String? password;
+
+  @HiveField(5)
+  final String? profilePicture;
 
   AuthHiveModel({
     String? authId,
@@ -24,9 +31,10 @@ class AuthHiveModel extends HiveObject {
     required this.email,
     required this.phoneNumber,
     this.password,
-  }) : authId = authId ?? Uuid().v4();
+    this.profilePicture,
+  }) : authId = authId ?? const Uuid().v4();
 
-  //From Entity
+  // 🔁 From Entity → Hive
   factory AuthHiveModel.fromEntity(AuthEntity entity) {
     return AuthHiveModel(
       authId: entity.authId,
@@ -34,10 +42,11 @@ class AuthHiveModel extends HiveObject {
       email: entity.email,
       phoneNumber: entity.phoneNumber,
       password: entity.password,
+      profilePicture: entity.profilePicture,
     );
   }
 
-  //To Entity
+  // 🔁 Hive → Entity
   AuthEntity toEntity() {
     return AuthEntity(
       authId: authId,
@@ -45,6 +54,12 @@ class AuthHiveModel extends HiveObject {
       email: email,
       phoneNumber: phoneNumber,
       password: password,
+      profilePicture: profilePicture,
     );
+  }
+
+  // 🔁 List Conversion
+  static List<AuthEntity> toEntityList(List<AuthHiveModel> models) {
+    return models.map((model) => model.toEntity()).toList();
   }
 }

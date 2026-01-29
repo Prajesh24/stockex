@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:stockex/core/constants/hive_table_constant.dart';
 import 'package:stockex/features/auth/data/model/auth_hive_model.dart';
+import 'package:stockex/features/update/data/model/update_hive_model.dart';
 
 final hiveServiceProvider = Provider<HiveService>((ref) {
   return HiveService();
@@ -22,8 +23,16 @@ class HiveService {
       Hive.registerAdapter(AuthHiveModelAdapter());
     }
 
+    if (!Hive.isAdapterRegistered(HiveTableConstant.updateTypeId)) {
+      Hive.registerAdapter(UpdateHiveModelAdapter());
+    }
+
     if (!Hive.isBoxOpen(HiveTableConstant.authTable)) {
       await Hive.openBox<AuthHiveModel>(HiveTableConstant.authTable);
+    }
+
+    if (!Hive.isBoxOpen(HiveTableConstant.updateTable)) {
+      await Hive.openBox<UpdateHiveModel>(HiveTableConstant.updateTable);
     }
   }
 
@@ -93,12 +102,24 @@ class HiveService {
 
   //login
   Future<AuthHiveModel> loginUser(String email, String password) async {
-    final user = _authBox.values.where(
-      (user) => user.email == email && user.password == password,
-    );
-    if (user.isNotEmpty) {
-      return user.first;
-    } else {
+    try {
+      // Debug: Print all users to see what's stored
+      print('Total users in Hive: ${_authBox.length}');
+      print('Looking for email: $email, password: $password');
+      
+      for (var user in _authBox.values) {
+        print('Stored user - email: ${user.email}, password: ${user.password}');
+      }
+      
+      // Search for user with case-insensitive email
+      final user = _authBox.values.firstWhere(
+        (u) => u.email.toLowerCase().trim() == email.toLowerCase().trim() && 
+               u.password == password,
+        orElse: () => throw Exception('Invalid email or password'),
+      );
+      return user;
+    } catch (e) {
+      print('Login error: $e');
       throw Exception('User not found');
     }
   }
@@ -115,5 +136,40 @@ class HiveService {
   bool isEmailExists(String email) {
     final user = _authBox.values.where((user) => user.email == email);
     return user.isNotEmpty;
+  }
+
+  // Update user email
+  Future<void> updateUserEmail(String authId, String newEmail) async {
+    final user = _authBox.get(authId);
+    if (user != null) {
+      final updatedUser = AuthHiveModel(
+        authId: user.authId,
+        fullName: user.fullName,
+        email: newEmail,
+        phoneNumber: user.phoneNumber,
+        password: user.password,
+      );
+      await _authBox.put(authId, updatedUser);
+    }
+  }
+
+  // ==================== Update Profile CRUD Operations ====================
+
+  Box<UpdateHiveModel> get _updateBox =>
+      Hive.box<UpdateHiveModel>(HiveTableConstant.updateTable);
+
+  // Save/Update profile
+  Future<void> saveUpdateProfile(UpdateHiveModel profile) async {
+    await _updateBox.put('profile_key', profile);
+  }
+
+  // Get user profile
+  Future<UpdateHiveModel?> getUpdateProfile(String userId) async {
+    return _updateBox.get('profile_key');
+  }
+
+  // Delete profile
+  Future<void> deleteUpdateProfile(String userId) async {
+    await _updateBox.delete('profile_key');
   }
 }

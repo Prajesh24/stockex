@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stockex/features/auth/domain/usecase/login_usecase.dart';
 import 'package:stockex/features/auth/domain/usecase/register_usecase.dart';
 import 'package:stockex/features/auth/presentation/state/auth_state.dart';
+import 'package:stockex/features/auth/domain/entities/auth_entity.dart';
+import 'package:stockex/core/services/hive/hive_service.dart';
 
 //provider for auth view model
 final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
@@ -67,5 +69,27 @@ class AuthViewModel extends Notifier<AuthState> {
         );
       },
     );
+  }
+
+  // Update auth entity with new profile data
+  Future<void> updateAuthEntity({
+    required String fullName,
+    required String email,
+    required String phoneNumber,
+  }) async {
+    final currentEntity = state.authEntity;
+    if (currentEntity != null && currentEntity.authId != null) {
+      final updatedEntity = AuthEntity(
+        authId: currentEntity.authId,
+        fullName: fullName,
+        email: email,
+        phoneNumber: phoneNumber,
+      );
+      state = state.copyWith(authEntity: updatedEntity);
+
+      // Update the email in local Hive storage so old email can't be used for login
+      final hiveService = ref.read(hiveServiceProvider);
+      await hiveService.updateUserEmail(currentEntity.authId!, email);
+    }
   }
 }
