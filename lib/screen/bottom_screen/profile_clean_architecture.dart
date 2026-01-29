@@ -1,78 +1,33 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:stockex/core/utils/snackbar_utils.dart';
-import 'package:stockex/features/auth/presentation/pages/login_page.dart';
-import 'package:stockex/features/auth/presentation/view_model/auth_view_model.dart';
 import 'package:stockex/features/update/presentation/view_model/update_view_model.dart';
 import 'package:stockex/screen/edit_profile_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+class ProfileScreenCleanArchitecture extends ConsumerStatefulWidget {
+  const ProfileScreenCleanArchitecture({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreenCleanArchitecture> createState() =>
+      _ProfileScreenCleanArchitectureState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _ProfileScreenCleanArchitectureState
+    extends ConsumerState<ProfileScreenCleanArchitecture> {
   XFile? _profileImage;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _loadProfileImage(); // Load the image when the screen is initialized
-  }
-
-  // Load profile image from SharedPreferences
-  Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? imagePath = prefs.getString('profileImage');
-    if (imagePath != null) {
-      setState(() {
-        _profileImage = XFile(imagePath);
-      });
-    }
-  }
-
-  // Save profile image to SharedPreferences
-  Future<void> _saveProfileImage(String path) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profileImage', path);
-  }
-
-  // Logout function
-  Future<void> _logout() async {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              // Navigate to login page and remove all previous routes
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                  (route) => false,
-                );
-                SnackbarUtils.showSuccess(context, 'Logged out successfully');
-              }
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    // Load user profile when screen initializes
+    Future.microtask(() {
+      ref.read(updateViewModelProvider.notifier).getUserProfile();
+    });
   }
 
   // Request camera permission
@@ -129,7 +84,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       setState(() {
         _profileImage = photo;
       });
-      _saveProfileImage(photo.path); // Save the image path
+      // Upload the picture using the view model
+      if (mounted) {
+        ref
+            .read(updateViewModelProvider.notifier)
+            .uploadProfilePicture(imagePath: photo.path);
+      }
     }
   }
 
@@ -145,20 +105,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         setState(() {
           _profileImage = image;
         });
-        _saveProfileImage(image.path); // Save the image path
+        // Upload the picture using the view model
+        if (mounted) {
+          ref
+              .read(updateViewModelProvider.notifier)
+              .uploadProfilePicture(imagePath: image.path);
+        }
       }
     } catch (e) {
       debugPrint("Error picking image from gallery: $e");
       if (mounted) {
         SnackbarUtils.showError(
           context,
-          "Failed to pick image from gallery.please upload using camera",
+          "Failed to pick image from gallery. Please use camera.",
         );
       }
     }
   }
 
-  //code for dialogBox:showDialog box for choosing camera or gallery
+  // Show media picker dialog
   Future<void> _pickMedia() async {
     showModalBottomSheet(
       context: context,
@@ -194,21 +159,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch auth state to get logged-in user data
-    final authState = ref.watch(authViewModelProvider);
-
-    // Watch update state to refresh when profile is updated
+    // Watch the update state
     final updateState = ref.watch(updateViewModelProvider);
-
-    // Listen for successful profile updates
-    ref.listen(updateViewModelProvider, (previous, next) {
-      if (previous != null &&
-          previous.status != next.status &&
-          next.status.toString().contains('updateSuccess')) {
-        // Refresh auth state after successful update
-        ref.refresh(authViewModelProvider);
-      }
-    });
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -242,8 +194,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         backgroundColor: Colors.grey,
                         backgroundImage: _profileImage != null
                             ? FileImage(File(_profileImage!.path))
-                            : null,
-                        child: _profileImage == null
+                            : updateState.profileEntity?.profilePicture != null
+                                ? NetworkImage(
+                                    updateState.profileEntity!.profilePicture!)
+                                : null,
+                        child: (_profileImage == null &&
+                                updateState.profileEntity?.profilePicture ==
+                                    null)
                             ? const Icon(
                                 Icons.person,
                                 size: 52,
@@ -251,30 +208,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               )
                             : null,
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.greenAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.camera_alt,
-                              size: 18,
-                              color: Colors.black,
+                      if (updateState.isLoading)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.greenAccent,
+                              shape: BoxShape.circle,
                             ),
-                            onPressed: _pickMedia,
+                            child: const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.greenAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: Colors.black,
+                              ),
+                              onPressed: _pickMedia,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
                   Text(
-                    authState.authEntity?.fullName ?? "User Name",
+                    updateState.profileEntity?.fullName ?? "User Name",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -283,15 +264,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    authState.authEntity?.email ?? "user@email.com",
+                    updateState.profileEntity?.email ?? "user@email.com",
                     style: const TextStyle(color: Colors.white60, fontSize: 14),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
             // 🔹 ACCOUNT
             _sectionTitle("Account"),
             _menuItem(
@@ -309,9 +288,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               title: "Security & Privacy",
               onTap: () {},
             ),
-
             const SizedBox(height: 20),
-
             // 🔹 PORTFOLIO
             _sectionTitle("Portfolio"),
             _menuItem(
@@ -329,9 +306,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               title: "Investment Preferences",
               onTap: () {},
             ),
-
             const SizedBox(height: 20),
-
             // 🔹 APP
             _sectionTitle("App"),
             _menuItem(
@@ -344,17 +319,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               title: "App Settings",
               onTap: () {},
             ),
-
             const SizedBox(height: 30),
-
             // 🔹 LOGOUT
             _menuItem(
               icon: Icons.logout,
               title: "Logout",
               isLogout: true,
-              onTap: _logout,
+              onTap: () {},
             ),
-
             const SizedBox(height: 20),
           ],
         ),
