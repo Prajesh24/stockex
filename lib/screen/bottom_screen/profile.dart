@@ -6,9 +6,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:stockex/core/utils/snackbar_utils.dart';
 import 'package:stockex/features/auth/presentation/pages/login_page.dart';
 import 'package:stockex/features/auth/presentation/view_model/auth_view_model.dart';
+import 'package:stockex/features/portfolio/presentation/pages/portfolio_summary_page.dart';
+import 'package:stockex/features/update/presentation/state/update_state.dart';
 import 'package:stockex/features/update/presentation/view_model/update_view_model.dart';
-import 'package:stockex/screen/edit_profile_screen.dart';
+import 'package:stockex/features/update/presentation/pages/edit_profile_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stockex/screen/bottom_screen/home.dart';
+import 'package:stockex/screen/bottom_screen/watchlist.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -24,13 +28,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProfileImage(); // Load the image when the screen is initialized
+    _loadProfileImage();
   }
 
-  // Load profile image from SharedPreferences
   Future<void> _loadProfileImage() async {
     final prefs = await SharedPreferences.getInstance();
-    String? imagePath = prefs.getString('profileImage');
+    final imagePath = prefs.getString('profileImage');
     if (imagePath != null) {
       setState(() {
         _profileImage = XFile(imagePath);
@@ -38,13 +41,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  // Save profile image to SharedPreferences
   Future<void> _saveProfileImage(String path) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profileImage', path);
   }
 
-  // Logout function
   Future<void> _logout() async {
     showDialog(
       context: context,
@@ -59,7 +60,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              // Navigate to login page and remove all previous routes
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -75,21 +75,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Request camera permission
   Future<bool> _requestCameraPermission() async {
     var status = await Permission.camera.status;
     if (status.isGranted) return true;
-
     if (status.isDenied) {
       status = await Permission.camera.request();
       return status.isGranted;
     }
-
     if (status.isPermanentlyDenied) {
       _showPermissionDialog();
       return false;
     }
-
     return false;
   }
 
@@ -115,7 +111,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Pick image from camera
   Future<void> _pickFromCamera() async {
     final hasPermission = await _requestCameraPermission();
     if (!hasPermission) return;
@@ -126,14 +121,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
 
     if (photo != null) {
-      setState(() {
-        _profileImage = photo;
-      });
-      _saveProfileImage(photo.path); // Save the image path
+      setState(() => _profileImage = photo);
+      _saveProfileImage(photo.path);
+
+      await ref
+          .read(updateViewModelProvider.notifier)
+          .uploadProfilePicture(imagePath: photo.path);
     }
   }
 
-  // Pick image from gallery
   Future<void> _pickFromGallery() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -142,23 +138,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _profileImage = image;
-        });
-        _saveProfileImage(image.path); // Save the image path
+        setState(() => _profileImage = image);
+        _saveProfileImage(image.path);
+
+        await ref
+            .read(updateViewModelProvider.notifier)
+            .uploadProfilePicture(imagePath: image.path);
       }
     } catch (e) {
       debugPrint("Error picking image from gallery: $e");
       if (mounted) {
         SnackbarUtils.showError(
           context,
-          "Failed to pick image from gallery.please upload using camera",
+          "Failed to pick image from gallery. Please try camera instead.",
         );
       }
     }
   }
 
-  //code for dialogBox:showDialog box for choosing camera or gallery
   Future<void> _pickMedia() async {
     showModalBottomSheet(
       context: context,
@@ -194,19 +191,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch auth state to get logged-in user data
     final authState = ref.watch(authViewModelProvider);
 
-    // Watch update state to refresh when profile is updated
-    final updateState = ref.watch(updateViewModelProvider);
-
-    // Listen for successful profile updates
     ref.listen(updateViewModelProvider, (previous, next) {
-      if (previous != null &&
-          previous.status != next.status &&
-          next.status.toString().contains('updateSuccess')) {
-        // Refresh auth state after successful update
-        ref.refresh(authViewModelProvider);
+      if (previous?.status != next.status &&
+          next.status == UpdateStatus.error &&
+          next.errorMessage != null) {
+        SnackbarUtils.showError(context, next.errorMessage!);
       }
     });
 
@@ -221,7 +212,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🔹 HEADER
+            // Header with profile image
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 28),
@@ -234,7 +225,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  // 🔹 Profile Image with Add Button
                   Stack(
                     children: [
                       CircleAvatar(
@@ -271,10 +261,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
                   Text(
-                    authState.authEntity?.fullName ?? "User Name",
+                    authState.authEntity?.name ?? "User Name",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -292,7 +281,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             const SizedBox(height: 24),
 
-            // 🔹 ACCOUNT
+            // Account Section - Only Edit Profile
             _sectionTitle("Account"),
             _menuItem(
               icon: Icons.edit_outlined,
@@ -304,50 +293,52 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 );
               },
             ),
-            _menuItem(
-              icon: Icons.security_outlined,
-              title: "Security & Privacy",
-              onTap: () {},
-            ),
 
             const SizedBox(height: 20),
 
-            // 🔹 PORTFOLIO
+            // Portfolio Section - Portfolio Summary & Watchlist
             _sectionTitle("Portfolio"),
             _menuItem(
               icon: Icons.pie_chart_outline,
               title: "Portfolio Summary",
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PortfolioSummaryPage(),
+                  ),
+                );
+              },
             ),
             _menuItem(
               icon: Icons.star_outline,
               title: "Watchlist",
-              onTap: () {},
-            ),
-            _menuItem(
-              icon: Icons.trending_up_outlined,
-              title: "Investment Preferences",
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WatchlistPage()),
+                );
+              },
             ),
 
             const SizedBox(height: 20),
 
-            // 🔹 APP
-            _sectionTitle("App"),
+            // Market Section - NEW
+            _sectionTitle("Market"),
             _menuItem(
-              icon: Icons.notifications_outlined,
-              title: "Notifications",
-              onTap: () {},
-            ),
-            _menuItem(
-              icon: Icons.settings_outlined,
-              title: "App Settings",
-              onTap: () {},
+              icon: Icons.trending_up_outlined,
+              title: "Market",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+              },
             ),
 
             const SizedBox(height: 30),
 
-            // 🔹 LOGOUT
+            // Logout
             _menuItem(
               icon: Icons.logout,
               title: "Logout",

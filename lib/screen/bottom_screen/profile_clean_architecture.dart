@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:stockex/core/utils/snackbar_utils.dart';
 import 'package:stockex/features/update/presentation/view_model/update_view_model.dart';
-import 'package:stockex/screen/edit_profile_screen.dart';
+import 'package:stockex/features/update/presentation/pages/edit_profile_page.dart';
 
 class ProfileScreenCleanArchitecture extends ConsumerStatefulWidget {
   const ProfileScreenCleanArchitecture({super.key});
@@ -255,7 +255,7 @@ class _ProfileScreenCleanArchitectureState
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    updateState.profileEntity?.fullName ?? "User Name",
+                    updateState.profileEntity?.name ?? "User Name",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,

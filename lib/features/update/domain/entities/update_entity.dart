@@ -2,17 +2,17 @@ import 'package:equatable/equatable.dart';
 
 class UpdateEntity extends Equatable {
   final String? userId;
-  final String? fullName;
+  final String? name;
   final String? email;
-  final String? phoneNumber;
+  // final String? phoneNumber;
   final String? profilePicture;
   final DateTime? updatedAt;
 
   const UpdateEntity({
     this.userId,
-    this.fullName,
+    this.name,
     this.email,
-    this.phoneNumber,
+    // this.phoneNumber,
     this.profilePicture,
     this.updatedAt,
   });
@@ -20,9 +20,9 @@ class UpdateEntity extends Equatable {
   @override
   List<Object?> get props => [
     userId,
-    fullName,
+    name,
     email,
-    phoneNumber,
+    // phoneNumber,
     profilePicture,
     updatedAt,
   ];

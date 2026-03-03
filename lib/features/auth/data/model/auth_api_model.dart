@@ -5,62 +5,54 @@ part 'auth_api_model.g.dart';
 
 @JsonSerializable()
 class AuthApiModel {
-  @JsonKey(name: '_id')
+  @JsonKey(name: '_id', includeIfNull: false)  // Don't send null _id
   final String? id;
 
-  @JsonKey(name: 'username') // map API "username" to fullName
-  final String fullName;
-
+  final String name;              // Matches web schema
   final String email;
-
-  @JsonKey(defaultValue: '') // API does not return phoneNumber
-  final String phoneNumber;
-
   final String? password;
-
-  @JsonKey(defaultValue: '') // API may not have profilePicture
-  final String? profilePicture;
+  
+  @JsonKey(name: 'imageUrl', includeIfNull: false)
+  final String? imageUrl;         // Matches web schema
+  
+  final String? role;
 
   AuthApiModel({
     this.id,
-    required this.fullName,
+    required this.name,
     required this.email,
-    this.phoneNumber = '',
     this.password,
-    this.profilePicture='',
+    this.imageUrl,
+    this.role = 'user',
   });
 
-  /// JSON Serialization
   factory AuthApiModel.fromJson(Map<String, dynamic> json) =>
       _$AuthApiModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$AuthApiModelToJson(this);
 
-  /// API Model → Domain Entity
   AuthEntity toEntity() {
     return AuthEntity(
       authId: id,
-      fullName: fullName,
+      name: name,
       email: email,
-      phoneNumber: phoneNumber,
       password: password,
-      profilePicture: profilePicture,
+      imageUrl: imageUrl,
+      role: role,
     );
   }
 
-  /// Domain Entity → API Model
   factory AuthApiModel.fromEntity(AuthEntity entity) {
     return AuthApiModel(
       id: entity.authId,
-      fullName: entity.fullName,
+      name: entity.name,
       email: entity.email,
-      phoneNumber: entity.phoneNumber ?? '',
       password: entity.password,
-      profilePicture: entity.profilePicture ?? '',
+      imageUrl: entity.imageUrl,
+      role: entity.role,
     );
   }
 
-  /// Convert list of API Models → Entities
   static List<AuthEntity> toEntityList(List<AuthApiModel> models) {
     return models.map((model) => model.toEntity()).toList();
   }

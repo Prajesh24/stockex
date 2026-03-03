@@ -24,18 +24,16 @@ class UpdateViewModel extends Notifier<UpdateState> {
 
   /// ==================== UPDATE PROFILE ====================
   Future<void> updateProfile({
-    required String? fullName,
+    required String? name,
     required String? email,
-    required String? phoneNumber,
-    required String? profilePicture,
+    required String? imageUrl,
   }) async {
     state = state.copyWith(status: UpdateStatus.loading, isLoading: true);
 
     final params = UpdateProfileUsecaseParams(
-      fullName: fullName,
+      fullName: name,
       email: email,
-      phoneNumber: phoneNumber,
-      profilePicture: profilePicture,
+      imageUrl: imageUrl,
     );
 
     final result = await _updateProfileUsecase.call(params);

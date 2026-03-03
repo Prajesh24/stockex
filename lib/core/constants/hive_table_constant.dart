@@ -10,4 +10,8 @@ class HiveTableConstant {
   //update
   static const int updateTypeId = 1;
   static const String updateTable = 'update_table';
+
+  //Watchlist
+  static const int watchlistTypeId = 2;
+  static const String watchlistTable = 'watchlist_table';
 }

@@ -5,36 +5,41 @@ import 'package:stockex/features/auth/presentation/state/auth_state.dart';
 import 'package:stockex/features/auth/domain/entities/auth_entity.dart';
 import 'package:stockex/core/services/hive/hive_service.dart';
 
-//provider for auth view model
+/// Provider for auth view model
 final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
   () => AuthViewModel(),
 );
 
 class AuthViewModel extends Notifier<AuthState> {
-  late final RegisterUseCase _registerUseCase;
-  late final LoginUsecase _loginUsecase;
+  // ✅ No late final fields — use cases are read directly when needed
+  // ❌ REMOVED: late final RegisterUseCase _registerUseCase;
+  // ❌ REMOVED: late final LoginUsecase _loginUsecase;
+  // Using late final in a Notifier crashes if the provider is refreshed,
+  // because build() is called again and Dart forbids reassigning late final fields.
 
   @override
-  build() {
-    _registerUseCase = ref.read(registerUsecaseProvider);
-    _loginUsecase = ref.read(loginUsecaseProvider);
+  AuthState build() {
     return AuthState();
   }
 
   Future<void> register({
-    required String fullName,
+    required String name,
     required String email,
-    required String phoneNumber,
     required String password,
+    required String confirmPassword,
   }) async {
-    state = state.copyWith(status: AuthStatus.loading);
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+
     final params = RegisterUsecaseParams(
-      fullName: fullName,
+      name: name,
       email: email,
-      phoneNumber: phoneNumber,
       password: password,
+      confirmPassword: confirmPassword, // ✅ Fixed: was passing password twice
     );
-    final result = await _registerUseCase.call(params);
+
+    // ✅ Read use case directly — safe across rebuilds
+    final result = await ref.read(registerUsecaseProvider).call(params);
+
     result.fold(
       (failure) {
         print('Register failed: ${failure.message}');
@@ -50,11 +55,17 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
-  //login
-  Future<void> login({required String email, required String password}) async {
-    state = state.copyWith(status: AuthStatus.loading);
+  Future<void> login({
+    required String email,
+    required String password,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+
     final params = LoginUsecaseParams(email: email, password: password);
-    final result = await _loginUsecase.call(params);
+
+    // ✅ Read use case directly — safe across rebuilds
+    final result = await ref.read(loginUsecaseProvider).call(params);
+
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -71,25 +82,30 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
-  // Update auth entity with new profile data
+  /// Update auth entity with new profile data and sync to local storage
   Future<void> updateAuthEntity({
-    required String fullName,
+    required String name,
     required String email,
-    required String phoneNumber,
   }) async {
     final currentEntity = state.authEntity;
-    if (currentEntity != null && currentEntity.authId != null) {
-      final updatedEntity = AuthEntity(
-        authId: currentEntity.authId,
-        fullName: fullName,
-        email: email,
-        phoneNumber: phoneNumber,
-      );
-      state = state.copyWith(authEntity: updatedEntity);
+    if (currentEntity == null || currentEntity.authId == null) return;
 
-      // Update the email in local Hive storage so old email can't be used for login
-      final hiveService = ref.read(hiveServiceProvider);
-      await hiveService.updateUserEmail(currentEntity.authId!, email);
-    }
+    final updatedEntity = AuthEntity(
+      authId: currentEntity.authId,
+      name: name,
+      email: email,
+    );
+
+    state = state.copyWith(authEntity: updatedEntity);
+
+    // Sync updated email to Hive so it's reflected on next local login
+    await ref
+        .read(hiveServiceProvider)
+        .updateUserEmail(currentEntity.authId!, email);
+  }
+
+  /// Logout — reset state
+  void logout() {
+    state = AuthState();
   }
 }

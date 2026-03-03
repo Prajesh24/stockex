@@ -9,10 +9,9 @@ part of 'update_api_model.dart';
 UpdateApiModel _$UpdateApiModelFromJson(Map<String, dynamic> json) =>
     UpdateApiModel(
       id: json['_id'] as String?,
-      fullName: json['username'] as String?,
+      name: json['name'] as String?,
       email: json['email'] as String?,
-      phoneNumber: json['phoneNumber'] as String? ?? '',
-      profilePicture: json['profilePicture'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String? ?? '',
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.parse(json['updatedAt'] as String),
@@ -21,9 +20,8 @@ UpdateApiModel _$UpdateApiModelFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$UpdateApiModelToJson(UpdateApiModel instance) =>
     <String, dynamic>{
       '_id': instance.id,
-      'username': instance.fullName,
+      'name': instance.name,
       'email': instance.email,
-      'phoneNumber': instance.phoneNumber,
-      'profilePicture': instance.profilePicture,
+      'imageUrl': instance.imageUrl,
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };

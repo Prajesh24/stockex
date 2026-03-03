@@ -10,18 +10,18 @@ import 'package:stockex/features/update/domain/repository/update_repository.dart
 class UpdateProfileUsecaseParams extends Equatable {
   final String? fullName;
   final String? email;
-  final String? phoneNumber;
-  final String? profilePicture;
+  // final String? phoneNumber;
+  final String? imageUrl;
 
   const UpdateProfileUsecaseParams({
     this.fullName,
     this.email,
-    this.phoneNumber,
-    this.profilePicture,
+    // this.phoneNumber,
+    this.imageUrl,
   });
 
   @override
-  List<Object?> get props => [fullName, email, phoneNumber, profilePicture];
+  List<Object?> get props => [fullName, email, imageUrl];
 }
 
 class UploadProfilePictureUsecaseParams extends Equatable {
@@ -62,10 +62,10 @@ class UpdateProfileUsecase
   @override
   Future<Either<Failure, bool>> call(UpdateProfileUsecaseParams params) {
     final entity = UpdateEntity(
-      fullName: params.fullName,
+      name: params.fullName,
       email: params.email,
-      phoneNumber: params.phoneNumber,
-      profilePicture: params.profilePicture,
+      // phoneNumber: params.phoneNumber,
+      profilePicture: params.imageUrl,
     );
     return _updateRepository.updateProfile(entity);
   }

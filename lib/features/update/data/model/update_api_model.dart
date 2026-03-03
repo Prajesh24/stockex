@@ -8,27 +8,29 @@ class UpdateApiModel {
   @JsonKey(name: '_id')
   final String? id;
 
-  @JsonKey(name: 'username')
-  final String? fullName;
+  // ✅ Fixed: was 'username', backend uses 'name'
+  @JsonKey(name: 'name')
+  final String? name;
 
   final String? email;
 
   @JsonKey(defaultValue: '')
-  final String? phoneNumber;
-
-  @JsonKey(defaultValue: '')
-  final String? profilePicture;
+  final String? imageUrl;
 
   @JsonKey(name: 'updatedAt')
   final DateTime? updatedAt;
 
+  // ✅ Local file path for upload — never sent to server
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final String? imagePath;
+
   UpdateApiModel({
     this.id,
-    this.fullName,
+    this.name,
     this.email,
-    this.phoneNumber = '',
-    this.profilePicture = '',
+    this.imageUrl = '',
     this.updatedAt,
+    this.imagePath, // local only
   });
 
   /// JSON Serialization
@@ -41,10 +43,9 @@ class UpdateApiModel {
   UpdateEntity toEntity() {
     return UpdateEntity(
       userId: id,
-      fullName: fullName,
+      name: name,
       email: email,
-      phoneNumber: phoneNumber,
-      profilePicture: profilePicture,
+      profilePicture: imageUrl,
       updatedAt: updatedAt,
     );
   }
@@ -53,10 +54,9 @@ class UpdateApiModel {
   factory UpdateApiModel.fromEntity(UpdateEntity entity) {
     return UpdateApiModel(
       id: entity.userId,
-      fullName: entity.fullName,
+      name: entity.name,
       email: entity.email,
-      phoneNumber: entity.phoneNumber ?? '',
-      profilePicture: entity.profilePicture ?? '',
+      imageUrl: entity.profilePicture ?? '',
       updatedAt: entity.updatedAt,
     );
   }

@@ -47,11 +47,9 @@ class AuthRepository implements IAuthRepository {
         final user = await _authRemoteDatasource.loginUser(email, password);
 
         if (user == null) {
-           return Left(ServerFailure(message: 'Login failed'));
+          return Left(ServerFailure(message: 'Login failed'));
         }
         return Right(user.toEntity());
-
-
       } on DioException catch (e) {
         return Left(
           ServerFailure(
@@ -79,11 +77,24 @@ class AuthRepository implements IAuthRepository {
 
   // 📝 REGISTER
   @override
-  Future<Either<Failure, bool>> register(AuthEntity entity) async {
+  Future<Either<Failure, bool>> register(
+    AuthEntity entity, {
+    String? confirmPassword,
+  }) async {
     if (await _networkInfo.isConnected) {
       try {
         final apiModel = AuthApiModel.fromEntity(entity);
-        await _authRemoteDatasource.registerUser(apiModel);
+
+     
+        final result = await _authRemoteDatasource.registerUser(
+          apiModel,
+          confirmPassword: confirmPassword,
+        );
+
+        if (result == null) {
+          return Left(ServerFailure(message: 'Registration failed'));
+        }
+
         return const Right(true);
       } on DioException catch (e) {
         return Left(
@@ -96,6 +107,7 @@ class AuthRepository implements IAuthRepository {
         return Left(ServerFailure(message: e.toString()));
       }
     } else {
+      // Local registration doesn't need confirmPassword (already validated in UI)
       try {
         final hiveModel = AuthHiveModel.fromEntity(entity);
         await _authLocalDatasource.registerUser(hiveModel);

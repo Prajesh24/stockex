@@ -16,8 +16,8 @@ class _ButtonNavigatorScreenState extends State<ButtonNavigatorScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    PortfolioScreen(),
-    WatchlistScreen(),
+    PortfolioPage(),
+    WatchlistPage(),
     ProfileScreen(),
   ];
 

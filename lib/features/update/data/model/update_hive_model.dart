@@ -11,25 +11,25 @@ class UpdateHiveModel extends HiveObject {
   final String? userId;
 
   @HiveField(1)
-  final String? fullName;
+  final String? name;
 
   @HiveField(2)
   final String? email;
 
-  @HiveField(3)
-  final String? phoneNumber;
+  // @HiveField(3)
+  // final String? phoneNumber;
 
-  @HiveField(4)
+  @HiveField(3)
   final String? profilePicture;
 
-  @HiveField(5)
+  @HiveField(4)
   final DateTime? updatedAt;
 
   UpdateHiveModel({
     String? userId,
-    this.fullName,
+    this.name,
     this.email,
-    this.phoneNumber,
+    // this.phoneNumber,
     this.profilePicture,
     this.updatedAt,
   }) : userId = userId ?? const Uuid().v4();
@@ -38,9 +38,9 @@ class UpdateHiveModel extends HiveObject {
   factory UpdateHiveModel.fromEntity(UpdateEntity entity) {
     return UpdateHiveModel(
       userId: entity.userId,
-      fullName: entity.fullName,
+      name: entity.name,
       email: entity.email,
-      phoneNumber: entity.phoneNumber,
+      // phoneNumber: entity.phoneNumber,
       profilePicture: entity.profilePicture,
       updatedAt: entity.updatedAt,
     );
@@ -50,9 +50,9 @@ class UpdateHiveModel extends HiveObject {
   UpdateEntity toEntity() {
     return UpdateEntity(
       userId: userId,
-      fullName: fullName,
+      name: name,
       email: email,
-      phoneNumber: phoneNumber,
+      // phoneNumber: phoneNumber,
       profilePicture: profilePicture,
       updatedAt: updatedAt,
     );

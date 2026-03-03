@@ -144,9 +144,8 @@ class HiveService {
     if (user != null) {
       final updatedUser = AuthHiveModel(
         authId: user.authId,
-        fullName: user.fullName,
+        name: user.name,
         email: newEmail,
-        phoneNumber: user.phoneNumber,
         password: user.password,
       );
       await _authBox.put(authId, updatedUser);

@@ -1,21 +1,25 @@
+// lib/core/api/app_client.dart
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import 'package:stockex/core/api/api_endpoints.dart';
+import 'package:stockex/core/services/storage/token_service.dart';
 
-// 🔹 Provider
+/// 🔹 Provider with injected TokenService
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
+  return ApiClient(
+    tokenService: ref.read(tokenServiceProvider),
+  );
 });
 
 class ApiClient {
   late final Dio _dio;
+  final TokenService _tokenService;
 
-  ApiClient() {
+  ApiClient({required TokenService tokenService}) : _tokenService = tokenService {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
@@ -25,11 +29,15 @@ class ApiClient {
           'Content-Type': "application/json",
           'Accept': "application/json",
         },
+        validateStatus: (status) {
+          return status != null && status < 500;
+        },
+        receiveDataWhenStatusError: true,
       ),
     );
 
-    // 🔐 Auth interceptor
-    _dio.interceptors.add(_AuthInterceptor());
+    // 🔐 Auth interceptor with injected TokenService
+    _dio.interceptors.add(_AuthInterceptor(tokenService: _tokenService));
 
     // 🔁 Retry on network failure
     _dio.interceptors.add(
@@ -73,8 +81,7 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) {
-    return _dio.get(path,
-        queryParameters: queryParameters, options: options);
+    return _dio.get(path, queryParameters: queryParameters, options: options);
   }
 
   // POST
@@ -138,26 +145,50 @@ class ApiClient {
   }
 }
 
-// 🔐 Auth Interceptor
+// 🔐 Auth Interceptor with Injected TokenService
 class _AuthInterceptor extends Interceptor {
-  final _storage = const FlutterSecureStorage();
-  static const String _tokenKey = 'auth_token';
+  final TokenService _tokenService;
+
+  _AuthInterceptor({required TokenService tokenService})
+      : _tokenService = tokenService;
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
-  ) async {
+  ) {
+    final path = options.path;
     final isAuthEndpoint =
-        options.path == ApiEndpoints.login ||
-        options.path == ApiEndpoints.register;
+        path.contains('/login') || path.contains('/register');
+
+    if (kDebugMode) {
+      print('🔐 AuthInterceptor:');
+      print('  Path: $path');
+      print('  Is Auth Endpoint: $isAuthEndpoint');
+    }
 
     if (!isAuthEndpoint) {
-      final token = await _storage.read(key: _tokenKey);
-      if (token != null) {
+      // ✅ Get token from injected service (synchronous)
+      final token = _tokenService.getToken();
+
+      if (kDebugMode) {
+        print('  Token: ${token != null ? 'Found' : 'NOT FOUND'}');
+      }
+
+      if (token != null && token.isNotEmpty) {
         options.headers["Authorization"] = "Bearer $token";
+
+        if (kDebugMode) {
+          print('  ✅ Added Authorization header');
+        }
+      } else {
+        if (kDebugMode) {
+          print('  ⚠️ No token available');
+        }
       }
     }
+
+    if (kDebugMode) print('');
 
     handler.next(options);
   }
@@ -165,8 +196,14 @@ class _AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.response?.statusCode == 401) {
-      _storage.delete(key: _tokenKey);
-      // TODO: navigate to login
+      if (kDebugMode) {
+        print('🚫 401 Unauthorized - Clearing token');
+      }
+
+      // Clear token on 401
+      _tokenService.removeToken();
+
+      // TODO: Navigate to login or emit logout event
     }
     handler.next(err);
   }

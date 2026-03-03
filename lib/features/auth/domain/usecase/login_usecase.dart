@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stockex/core/error/faliures.dart';
 import 'package:stockex/core/usecases/usecase.dart';
-import 'package:stockex/features/auth/data/repositories/auth_repository.dart';
+import 'package:stockex/features/auth/data/repositories/auth_repository_imp.dart';
 import 'package:stockex/features/auth/domain/entities/auth_entity.dart';
 import 'package:stockex/features/auth/domain/repository/auth_repository.dart';
 

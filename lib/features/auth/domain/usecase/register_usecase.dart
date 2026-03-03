@@ -3,26 +3,25 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:stockex/core/error/faliures.dart';
 import 'package:stockex/core/usecases/usecase.dart';
-import 'package:stockex/features/auth/data/repositories/auth_repository.dart';
+import 'package:stockex/features/auth/data/repositories/auth_repository_imp.dart';
 import 'package:stockex/features/auth/domain/entities/auth_entity.dart';
 import 'package:stockex/features/auth/domain/repository/auth_repository.dart';
 
 class RegisterUsecaseParams extends Equatable {
-  final String fullName;
+  final String name; // Changed from fullName
   final String email;
-  final String phoneNumber;
   final String password;
+  final String confirmPassword;
 
   const RegisterUsecaseParams({
-    required this.fullName,
+    required this.name, // Changed from fullName
     required this.email,
-    required this.phoneNumber,
     required this.password,
+    required this.confirmPassword,
   });
 
   @override
-  // TODO: implement props
-  List<Object?> get props => [fullName, email, phoneNumber, password];
+  List<Object?> get props => [name, email, password, confirmPassword];
 }
 
 //provider for register usecase
@@ -40,12 +39,20 @@ class RegisterUseCase
 
   @override
   Future<Either<Failure, bool>> call(RegisterUsecaseParams params) {
+    //debig
+    print('UseCase - params.confirmPassword: ${params.confirmPassword}');
     final entity = AuthEntity(
-      fullName: params.fullName,
+      name: params.name, // Changed from fullName
       email: params.email,
-      phoneNumber: params.phoneNumber,
       password: params.password,
+      imageUrl: null, // Optional, can be set later
+      role: 'user',
     );
-    return _authRepository.register(entity);
+
+    print('UseCase - passing confirmPassword: ${params.confirmPassword}');
+    return _authRepository.register(
+      entity,
+      confirmPassword: params.confirmPassword,
+    );
   }
 }

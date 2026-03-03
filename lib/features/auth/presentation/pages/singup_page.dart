@@ -19,7 +19,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   final nameController = TextEditingController();
   final emailController = TextEditingController();
-  final phoneController = TextEditingController();
+  // final phoneController = TextEditingController();
   final passController = TextEditingController();
   final confirmPassController = TextEditingController();
 
@@ -27,7 +27,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   void dispose() {
     nameController.dispose();
     emailController.dispose();
-    phoneController.dispose();
+    // phoneController.dispose();
     passController.dispose();
     confirmPassController.dispose();
     super.dispose();
@@ -39,10 +39,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       ref
           .read(authViewModelProvider.notifier)
           .register(
-            fullName: nameController.text,
+            name: nameController.text,
             email: emailController.text,
-            phoneNumber: phoneController.text,
             password: passController.text,
+            confirmPassword: confirmPassController.text,
           );
     }
   }
@@ -117,15 +117,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     validator: (value) =>
                         value == null || value.isEmpty ? "Enter email" : null,
                   ),
-                  const SizedBox(height: 20),
+                  // const SizedBox(height: 20),
 
-                  MyTextField(
-                    label: "Phone Number",
-                    controller: phoneController,
-                    validator: (value) => value == null || value.isEmpty
-                        ? "Enter phone number"
-                        : null,
-                  ),
+                  // MyTextField(
+                  //   label: "Phone Number",
+                  //   controller: phoneController,
+                  //   validator: (value) => value == null || value.isEmpty
+                  //       ? "Enter phone number"
+                  //       : null,
+                  // ),
                   const SizedBox(height: 20),
 
                   MyTextField(

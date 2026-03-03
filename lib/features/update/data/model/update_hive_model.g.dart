@@ -18,29 +18,26 @@ class UpdateHiveModelAdapter extends TypeAdapter<UpdateHiveModel> {
     };
     return UpdateHiveModel(
       userId: fields[0] as String?,
-      fullName: fields[1] as String?,
+      name: fields[1] as String?,
       email: fields[2] as String?,
-      phoneNumber: fields[3] as String?,
-      profilePicture: fields[4] as String?,
-      updatedAt: fields[5] as DateTime?,
+      profilePicture: fields[3] as String?,
+      updatedAt: fields[4] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UpdateHiveModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.userId)
       ..writeByte(1)
-      ..write(obj.fullName)
+      ..write(obj.name)
       ..writeByte(2)
       ..write(obj.email)
       ..writeByte(3)
-      ..write(obj.phoneNumber)
-      ..writeByte(4)
       ..write(obj.profilePicture)
-      ..writeByte(5)
+      ..writeByte(4)
       ..write(obj.updatedAt);
   }
 

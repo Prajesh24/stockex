@@ -13,7 +13,7 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  late TextEditingController _phoneController;
+  // late TextEditingController _phoneController;
   bool _isLoading = false;
 
   @override
@@ -21,28 +21,25 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.initState();
     final authState = ref.read(authViewModelProvider);
     _nameController = TextEditingController(
-      text: authState.authEntity?.fullName ?? '',
+      text: authState.authEntity?.name ?? '',
     );
     _emailController = TextEditingController(
       text: authState.authEntity?.email ?? '',
     );
-    _phoneController = TextEditingController(
-      text: authState.authEntity?.phoneNumber ?? '',
-    );
+
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
+    // _phoneController.dispose();
     super.dispose();
   }
 
   Future<void> _saveChanges() async {
     if (_nameController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _phoneController.text.isEmpty) {
+        _emailController.text.isEmpty ) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill in all fields'),
@@ -58,17 +55,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final authViewModel = ref.read(authViewModelProvider.notifier);
 
     await updateViewModel.updateProfile(
-      fullName: _nameController.text,
+      name: _nameController.text,
       email: _emailController.text,
-      phoneNumber: _phoneController.text,
-      profilePicture: null,
+      imageUrl: null,
     );
 
     // Update auth entity with new profile data and update local storage
     await authViewModel.updateAuthEntity(
-      fullName: _nameController.text,
+      name: _nameController.text,
       email: _emailController.text,
-      phoneNumber: _phoneController.text,
+   
     );
 
     setState(() => _isLoading = false);
@@ -112,11 +108,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               controller: _emailController,
             ),
             const SizedBox(height: 16),
-            _inputField(
-              label: "Phone",
-              hint: "Enter phone number",
-              controller: _phoneController,
-            ),
+            // _inputField(
+            //   label: "Phone",
+            //   hint: "Enter phone number",
+            //   controller: _phoneController,
+            // ),
             const Spacer(),
 
             // 🔹 SAVE BUTTON
