@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stockex/features/watchlist/presentation/pages/watchlist_page.dart';
 import 'package:stockex/screen/bottom_screen/home.dart';
 import 'package:stockex/screen/bottom_screen/portfolio.dart';
 import 'package:stockex/screen/bottom_screen/profile.dart';

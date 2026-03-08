@@ -11,6 +11,7 @@ import 'package:stockex/features/update/presentation/state/update_state.dart';
 import 'package:stockex/features/update/presentation/view_model/update_view_model.dart';
 import 'package:stockex/features/update/presentation/pages/edit_profile_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stockex/features/watchlist/presentation/pages/watchlist_page.dart';
 import 'package:stockex/screen/bottom_screen/home.dart';
 import 'package:stockex/screen/bottom_screen/watchlist.dart';
 

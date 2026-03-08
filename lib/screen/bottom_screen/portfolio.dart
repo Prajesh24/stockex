@@ -1,8 +1,13 @@
 // lib/features/portfolio/presentation/pages/portfolio_page.dart
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:stockex/core/services/sensor/shake_detector.dart';
+import 'package:stockex/core/services/sensor/flip_detector.dart';
 import 'package:stockex/features/portfolio/domain/entities/portfolio_entity.dart';
 import 'package:stockex/features/portfolio/presentation/viewmodel/portfolio_viewmodel.dart';
 import 'package:stockex/features/portfolio/presentation/state/portfolio_state.dart';
@@ -17,12 +22,73 @@ class PortfolioPage extends ConsumerStatefulWidget {
 }
 
 class _PortfolioPageState extends ConsumerState<PortfolioPage> {
+  final ShakeDetector _shakeDetector = ShakeDetector();
+  final FlipDetector _flipDetector = FlipDetector();
+
+  bool _privacyMode = false;
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       ref.read(portfolioViewModelProvider.notifier).loadPortfolio();
     });
+
+    // Keep screen on so face-down doesn't trigger screen-off
+    WakelockPlus.enable();
+
+    // ── Gesture 1: Shake to refresh ──────────────────────────────────────────
+    _shakeDetector.start(_onShake);
+
+    // ── Gesture 2: Flip face-down/up for privacy mode ─────────────────────────
+    _flipDetector.start(
+      onFaceDown: _onFaceDown,
+      onFaceUp: _onFaceUp,
+    );
+  }
+
+  void _onShake() {
+    ref.read(portfolioViewModelProvider.notifier).loadPortfolio();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.refresh, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Refreshing portfolio…'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1B5E20),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  void _onFaceDown() {
+    if (!mounted) return;
+    setState(() => _privacyMode = true);
+    // Haptic confirms privacy activated without needing to look at screen
+    HapticFeedback.mediumImpact();
+  }
+
+  void _onFaceUp() {
+    if (!mounted) return;
+    setState(() => _privacyMode = false);
+    HapticFeedback.lightImpact();
+  }
+
+  @override
+  void dispose() {
+    // Release wakelock when leaving page — don't drain battery elsewhere
+    WakelockPlus.disable();
+    _shakeDetector.dispose();
+    _flipDetector.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,13 +114,53 @@ class _PortfolioPageState extends ConsumerState<PortfolioPage> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: _buildBody(state, currencyFormat),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddStockDialog(context),
-        backgroundColor: Colors.blue,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Stock'),
+      body: Stack(
+        children: [
+          _buildBody(state, currencyFormat),
+
+          // ── Privacy overlay — covers everything when face-down ─────────────
+          if (_privacyMode)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.93),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lock_outline,
+                          color: Colors.grey[600], size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Privacy Mode',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Flip phone face-up to reveal',
+                        style: TextStyle(
+                            color: Colors.grey[700], fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
+      // Hide FAB in privacy mode too
+      floatingActionButton: _privacyMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showAddStockDialog(context),
+              backgroundColor: Colors.blue,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Stock'),
+            ),
     );
   }
 
@@ -255,6 +361,7 @@ class _PortfolioPageState extends ConsumerState<PortfolioPage> {
             return _StockCard(
               summary: stock,
               format: format,
+              privacyMode: _privacyMode,
               onSell: () => _showSellDialog(stock),
               onDelete: () => _confirmDelete(stock),
             );
@@ -270,9 +377,7 @@ class _PortfolioPageState extends ConsumerState<PortfolioPage> {
       context: context,
       builder: (context) => AddStockDialog(
         onAdd: (params) {
-          ref
-              .read(portfolioViewModelProvider.notifier)
-              .addStock(
+          ref.read(portfolioViewModelProvider.notifier).addStock(
                 symbol: params['symbol']!,
                 name: params['name']!,
                 sector: params['sector'],
@@ -300,9 +405,7 @@ class _PortfolioPageState extends ConsumerState<PortfolioPage> {
       builder: (context) => SellStockDialog(
         stock: availableStock,
         onSell: (params) {
-          ref
-              .read(portfolioViewModelProvider.notifier)
-              .sellStock(
+          ref.read(portfolioViewModelProvider.notifier).sellStock(
                 id: availableStock.id!,
                 units: int.parse(params['units']!),
                 sellPrice: double.parse(params['sellPrice']!),
@@ -414,12 +517,14 @@ class _OverviewCard extends StatelessWidget {
 class _StockCard extends StatelessWidget {
   final SymbolSummary summary;
   final NumberFormat format;
+  final bool privacyMode;       // ← controlled by flip gesture
   final VoidCallback onSell;
   final VoidCallback onDelete;
 
   const _StockCard({
     required this.summary,
     required this.format,
+    required this.privacyMode,
     required this.onSell,
     required this.onDelete,
   });
@@ -439,6 +544,7 @@ class _StockCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Symbol + badges + buttons — always visible ─────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -525,87 +631,134 @@ class _StockCard extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 16),
+
+          // ── Unit badges — always visible ────────────────────────────────────
           Row(
             children: [
               _buildUnitBadge(
-                'Total',
-                summary.totalUnits.toString(),
-                Colors.grey,
-              ),
+                  'Total', summary.totalUnits.toString(), Colors.grey),
               const SizedBox(width: 8),
               _buildUnitBadge(
-                'Remaining',
-                summary.remainingUnits.toString(),
-                Colors.green,
-              ),
+                  'Remaining', summary.remainingUnits.toString(), Colors.green),
               if (summary.soldUnits > 0) ...[
                 const SizedBox(width: 8),
                 _buildUnitBadge(
-                  'Sold',
-                  summary.soldUnits.toString(),
-                  Colors.orange,
-                ),
+                    'Sold', summary.soldUnits.toString(), Colors.orange),
               ],
             ],
           ),
+
+          // ── NPR values — blurred when face-down ────────────────────────────
           if (summary.remainingUnits > 0) ...[
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPriceBox(
-                    'Market LTP',
-                    format.format(summary.currentLTP),
-                    isProfit ? Colors.green : Colors.red,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildPriceBox(
-                    'Your WACC',
-                    format.format(summary.wacc),
-                    Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isProfit
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isProfit
-                      ? Colors.green.withOpacity(0.3)
-                      : Colors.red.withOpacity(0.3),
-                ),
+            privacyMode
+                ? _buildBlurredValues(isProfit)
+                : _buildValues(isProfit),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Your original values layout — completely unchanged
+  Widget _buildValues(bool isProfit) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildPriceBox(
+                'Market LTP',
+                format.format(summary.currentLTP),
+                isProfit ? Colors.green : Colors.red,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Unrealized P/L',
-                    style: TextStyle(
-                      color: isProfit ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '${isProfit ? '+' : ''}${format.format(summary.unrealizedPL)} (${summary.unrealizedPLPercent.toStringAsFixed(2)}%)',
-                    style: TextStyle(
-                      color: isProfit ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPriceBox(
+                'Your WACC',
+                format.format(summary.wacc),
+                Colors.blue,
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isProfit
+                ? Colors.green.withOpacity(0.1)
+                : Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isProfit
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.red.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Unrealized P/L',
+                style: TextStyle(
+                  color: isProfit ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${isProfit ? '+' : ''}${format.format(summary.unrealizedPL)} (${summary.unrealizedPLPercent.toStringAsFixed(2)}%)',
+                style: TextStyle(
+                  color: isProfit ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Blurred placeholder — same height as values so card doesn't jump
+  Widget _buildBlurredValues(bool isProfit) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        children: [
+          // Invisible copy keeps card height identical to normal view
+          Opacity(opacity: 0, child: _buildValues(isProfit)),
+          // Blur on top
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lock_outline,
+                          color: Colors.grey[500], size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Hidden',
+                        style: TextStyle(
+                            color: Colors.grey[500], fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
